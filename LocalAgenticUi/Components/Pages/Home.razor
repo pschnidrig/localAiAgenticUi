@@ -1,0 +1,113 @@
+@page "/"
+@using LocalAgenticUi.Components.Blocks
+@using LocalAgenticUi.Tools
+@implements IDisposable
+@inject IChatClient ChatClient
+@inject NoteStore Notes
+@rendermode InteractiveServer
+
+<PageTitle>Local Agentic UI</PageTitle>
+
+<div class="layout">
+    <ChatPage Agent="agent" Placeholder="Try: What's the weather in Zurich? Save it as a note.">
+        <Header>
+            <h1>Local Agentic UI</h1>
+        </Header>
+        <WelcomeContent>
+            <p>Ask for the weather in a city, or ask the model to save a note. Saving a note needs your approval.</p>
+        </WelcomeContent>
+        <MessageListContent>
+            @* A tool call rendered as a card instead of text *@
+            <BlockRenderer TBlock="WeatherBlock" Context="weather">
+                <div class="tool-card">
+                    <div class="tool-card-title">Weather · @weather.City</div>
+                    @if (weather.HasResult)
+                    {
+                        <div class="tool-card-value">@weather.TemperatureC °C</div>
+                        <div>@weather.Condition</div>
+                    }
+                    else
+                    {
+                        <div class="tool-card-pending">Looking it up…</div>
+                    }
+                </div>
+            </BlockRenderer>
+
+            @* The agent pauses here until the user decides *@
+            <BlockRenderer TBlock="FunctionApprovalBlock" Context="approval">
+                <div class="tool-card approval">
+                    <div class="tool-card-title">The model wants to run <code>@approval.ToolName</code></div>
+                    @if (approval.Arguments is { } args)
+                    {
+                        <dl>
+                            @foreach (var (name, value) in args)
+                            {
+                                <dt>@name</dt>
+                                <dd>@value</dd>
+                            }
+                        </dl>
+                    }
+                    @switch (approval.Status)
+                    {
+                        case ApprovalStatus.Pending:
+                            <div class="approval-actions">
+                                <button class="sc-ai-btn sc-ai-btn--primary" @onclick="approval.Approve">Approve</button>
+                                <button class="sc-ai-btn sc-ai-btn--secondary" @onclick='() => approval.Reject("The user rejected this.")'>Reject</button>
+                            </div>
+                            break;
+                        case ApprovalStatus.Approved:
+                            <div class="approved">Approved</div>
+                            break;
+                        case ApprovalStatus.Rejected:
+                            <div class="rejected">Rejected</div>
+                            break;
+                    }
+                </div>
+            </BlockRenderer>
+        </MessageListContent>
+    </ChatPage>
+
+    <aside class="notes">
+        <h2>Notes (@Notes.Notes.Count)</h2>
+        @foreach (var note in Notes.Notes)
+        {
+            <article>
+                <strong>@note.Title</strong>
+                <p>@note.Content</p>
+            </article>
+        }
+    </aside>
+</div>
+
+@code {
+    private UIAgent agent = default!;
+
+    protected override void OnInitialized()
+    {
+        agent = new UIAgent(ChatClient, options =>
+        {
+            options.ChatOptions = new ChatOptions
+            {
+                Instructions = "You are a helpful assistant. Use the tools when they fit the question.",
+                Tools =
+                [
+                    AIFunctionFactory.Create(WeatherTool.GetWeather, WeatherTool.Name),
+                    // Wrapping a tool is all it takes to require approval
+                    new ApprovalRequiredAIFunction(AIFunctionFactory.Create(Notes.SaveNote, NoteStore.Name))
+                ]
+            };
+            // Registers the handlers the source generator created for [ToolBlock] classes
+            options.AddGeneratedToolBlocks();
+        });
+
+        Notes.Changed += OnNotesChanged;
+    }
+
+    private void OnNotesChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Notes.Changed -= OnNotesChanged;
+        agent.Dispose();
+    }
+}
