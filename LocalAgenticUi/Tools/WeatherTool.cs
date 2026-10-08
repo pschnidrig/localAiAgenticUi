@@ -1,6 +1,5 @@
 using System.ComponentModel;
 using System.Globalization;
-using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
 namespace LocalAgenticUi.Tools;
@@ -15,7 +14,7 @@ public sealed class WeatherTool(HttpClient http)
 
     [Description("Gets the current weather for a city.")]
     public async Task<WeatherReport> GetWeather(
-        [Description("The city name, e.g. Zurich")] string city,
+        [Description("The city name, e.g. Naters")] string city,
         CancellationToken cancellationToken = default)
     {
         var geo = await http.GetFromJsonAsync<GeocodingResponse>(
