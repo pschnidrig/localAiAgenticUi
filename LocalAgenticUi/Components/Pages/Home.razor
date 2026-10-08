@@ -15,7 +15,7 @@
             <h1>Local Agentic UI</h1>
         </Header>
         <WelcomeContent>
-            <p>Ask for the weather in a city, or ask the model to save a note. Both need your approval: the weather lookup calls Open-Meteo online.</p>
+            <p>Ask for the weather in a city, or ask the model to save a note. Saving a note needs your approval.</p>
         </WelcomeContent>
         <MessageListContent>
             @* A tool call rendered as a card instead of text *@
@@ -95,8 +95,7 @@
                 Instructions = "You are a helpful assistant. Use the tools when they fit the question.",
                 Tools =
                 [
-                    // Goes to the internet, so the user approves it first
-                    new ApprovalRequiredAIFunction(AIFunctionFactory.Create(Weather.GetWeather, WeatherTool.Name)),
+                    AIFunctionFactory.Create(Weather.GetWeather, WeatherTool.Name),
                     // Wrapping a tool is all it takes to require approval
                     new ApprovalRequiredAIFunction(AIFunctionFactory.Create(Notes.SaveNote, NoteStore.Name))
                 ]
