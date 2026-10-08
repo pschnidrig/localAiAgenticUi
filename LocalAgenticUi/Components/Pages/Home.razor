@@ -4,6 +4,7 @@
 @implements IDisposable
 @inject IChatClient ChatClient
 @inject NoteStore Notes
+@inject WeatherTool Weather
 @rendermode InteractiveServer
 
 <PageTitle>Local Agentic UI</PageTitle>
@@ -14,7 +15,7 @@
             <h1>Local Agentic UI</h1>
         </Header>
         <WelcomeContent>
-            <p>Ask for the weather in a city, or ask the model to save a note. Saving a note needs your approval.</p>
+            <p>Ask for the weather in a city, or ask the model to save a note. Both need your approval: the weather lookup calls Open-Meteo online.</p>
         </WelcomeContent>
         <MessageListContent>
             @* A tool call rendered as a card instead of text *@
@@ -23,7 +24,10 @@
                     <div class="tool-card-title">Weather · @weather.City</div>
                     @if (weather.HasResult)
                     {
-                        <div class="tool-card-value">@weather.TemperatureC °C</div>
+                        @if (weather.TemperatureC is { } temperature)
+                        {
+                            <div class="tool-card-value">@temperature °C</div>
+                        }
                         <div>@weather.Condition</div>
                     }
                     else
@@ -91,7 +95,8 @@
                 Instructions = "You are a helpful assistant. Use the tools when they fit the question.",
                 Tools =
                 [
-                    AIFunctionFactory.Create(WeatherTool.GetWeather, WeatherTool.Name),
+                    // Goes to the internet, so the user approves it first
+                    new ApprovalRequiredAIFunction(AIFunctionFactory.Create(Weather.GetWeather, WeatherTool.Name)),
                     // Wrapping a tool is all it takes to require approval
                     new ApprovalRequiredAIFunction(AIFunctionFactory.Create(Notes.SaveNote, NoteStore.Name))
                 ]

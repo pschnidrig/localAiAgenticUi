@@ -27,6 +27,9 @@ builder.Services.AddChatClient(lmStudioClient.GetChatClient(lmStudio.ModelName).
 // One note list per circuit
 builder.Services.AddScoped<NoteStore>();
 
+// Calls Open-Meteo for real weather data
+builder.Services.AddHttpClient<WeatherTool>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

@@ -1,11 +1,11 @@
 # LocalAgenticUi — Blazor AI Components + LM Studio
 
-A small Blazor Server app that tries the new (experimental) [Blazor AI components](https://devblogs.microsoft.com/dotnet/build-agentic-ui-blazor/) against a locally running LLM via [LM Studio](https://lmstudio.ai/). Nothing leaves your machine.
+A small Blazor Server app that tries the new (experimental) [Blazor AI components](https://devblogs.microsoft.com/dotnet/build-agentic-ui-blazor/) against a locally running LLM via [LM Studio](https://lmstudio.ai/). The model runs on your machine. Only the weather lookup goes online, and only after you approve it.
 
 It shows two patterns:
 
-- **Tool calls as UI**: the model calls `get_weather` and the result is rendered as a card, not as text.
-- **Human approval**: the model wants to call `save_note`, and the conversation pauses until you click *Approve* or *Reject*.
+- **Tool calls as UI**: the model calls `get_weather`, which fetches real weather from [Open-Meteo](https://open-meteo.com/), and the result is rendered as a card, not as text.
+- **Human approval**: the model wants to call `get_weather` or `save_note`, and the conversation pauses until you click *Approve* or *Reject*.
 
 ![Screenshot](docs/screenshot.png)
 
@@ -26,6 +26,7 @@ It shows two patterns:
 
 - [.NET 11 SDK](https://dotnet.microsoft.com/download) (RC1 or newer)
 - [LM Studio](https://lmstudio.ai/) with a model that supports **tool calling** (e.g. `qwen2.5-7b-instruct`, `qwen3-8b`)
+- Internet access for the weather lookup. Open-Meteo is free and needs no API key.
 
 Small models often answer in text instead of calling a tool. If nothing happens, try a bigger model.
 
@@ -69,7 +70,7 @@ dotnet run
 
 Open the URL shown in the console and try:
 
-- `What's the weather in Zurich?` → a weather card
+- `What's the weather in Zurich?` → an approval card, then a weather card with the current weather after *Approve*
 - `Save a note that I need milk` → an approval card, the note shows up on the right after *Approve*
 
 ---
@@ -80,6 +81,9 @@ Open the URL shown in the console and try:
 // Program.cs: the tools run on the server
 builder.Services.AddChatClient(lmStudioClient.GetChatClient(lmStudio.ModelName).AsIChatClient())
     .UseFunctionInvocation();
+
+// WeatherTool gets an HttpClient to call Open-Meteo
+builder.Services.AddHttpClient<WeatherTool>();
 ```
 
 ```csharp
@@ -90,7 +94,7 @@ agent = new UIAgent(ChatClient, options =>
     {
         Tools =
         [
-            AIFunctionFactory.Create(WeatherTool.GetWeather, WeatherTool.Name),
+            new ApprovalRequiredAIFunction(AIFunctionFactory.Create(Weather.GetWeather, WeatherTool.Name)),
             new ApprovalRequiredAIFunction(AIFunctionFactory.Create(Notes.SaveNote, NoteStore.Name))
         ]
     };
@@ -104,7 +108,7 @@ agent = new UIAgent(ChatClient, options =>
 public partial class WeatherBlock : FunctionInvocationContentBlock
 {
     [ToolParameter(Name = "city")] public string? City { get; set; }
-    [ToolResult(Name = "temperatureC")] public int? TemperatureC { get; set; }
+    [ToolResult(Name = "temperatureC")] public double? TemperatureC { get; set; }
     [ToolResult(Name = "condition")] public string? Condition { get; set; }
 }
 ```
@@ -120,7 +124,7 @@ LocalAgenticUi/
 ├── Configuration/
 │   └── LmStudioOptions.cs     # Strongly-typed config model
 ├── Tools/
-│   ├── WeatherTool.cs         # get_weather (fake data)
+│   ├── WeatherTool.cs         # get_weather (Open-Meteo, needs approval)
 │   └── NoteStore.cs           # save_note (needs approval)
 ├── Components/
 │   ├── Blocks/
@@ -144,3 +148,9 @@ LocalAgenticUi/
 
 **Model not responding**
 → In LM Studio, check that a model is actually loaded (not just downloaded) before starting the server.
+
+**The weather card says "City not found"**
+→ Open-Meteo didn't recognize the name. Try the English spelling or a bigger nearby city.
+
+**The weather lookup fails**
+→ The app needs internet access to reach `geocoding-api.open-meteo.com` and `api.open-meteo.com`.

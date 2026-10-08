@@ -12,7 +12,7 @@ public partial class WeatherBlock : FunctionInvocationContentBlock
     public string? City { get; set; }
 
     [ToolResult(Name = "temperatureC")]
-    public int? TemperatureC { get; set; }
+    public double? TemperatureC { get; set; }
 
     [ToolResult(Name = "condition")]
     public string? Condition { get; set; }
