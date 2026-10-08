@@ -1,11 +1,11 @@
 # LocalAgenticUi — Blazor AI Components + LM Studio
 
-A small Blazor Server app that tries the new (experimental) [Blazor AI components](https://devblogs.microsoft.com/dotnet/build-agentic-ui-blazor/) against a locally running LLM via [LM Studio](https://lmstudio.ai/). The model runs on your machine. Only the weather lookup goes online, and only after you approve it.
+A small Blazor Server app that tries the new (experimental) [Blazor AI components](https://devblogs.microsoft.com/dotnet/build-agentic-ui-blazor/) against a locally running LLM via [LM Studio](https://lmstudio.ai/). The model runs on your machine. Only the weather lookup goes online: the city name is sent to Open-Meteo.
 
 It shows two patterns:
 
 - **Tool calls as UI**: the model calls `get_weather`, which fetches real weather from [Open-Meteo](https://open-meteo.com/), and the result is rendered as a card, not as text.
-- **Human approval**: the model wants to call `get_weather` or `save_note`, and the conversation pauses until you click *Approve* or *Reject*.
+- **Human approval**: the model wants to call `save_note`, and the conversation pauses until you click *Approve* or *Reject*.
 
 ![Screenshot](docs/screenshot.png)
 
@@ -70,7 +70,7 @@ dotnet run
 
 Open the URL shown in the console and try:
 
-- `What's the weather in Zurich?` → an approval card, then a weather card with the current weather after *Approve*
+- `What's the weather in Zurich?` → a weather card with the current weather
 - `Save a note that I need milk` → an approval card, the note shows up on the right after *Approve*
 
 ---
@@ -94,7 +94,7 @@ agent = new UIAgent(ChatClient, options =>
     {
         Tools =
         [
-            new ApprovalRequiredAIFunction(AIFunctionFactory.Create(Weather.GetWeather, WeatherTool.Name)),
+            AIFunctionFactory.Create(Weather.GetWeather, WeatherTool.Name),
             new ApprovalRequiredAIFunction(AIFunctionFactory.Create(Notes.SaveNote, NoteStore.Name))
         ]
     };
@@ -124,7 +124,7 @@ LocalAgenticUi/
 ├── Configuration/
 │   └── LmStudioOptions.cs     # Strongly-typed config model
 ├── Tools/
-│   ├── WeatherTool.cs         # get_weather (Open-Meteo, needs approval)
+│   ├── WeatherTool.cs         # get_weather (Open-Meteo)
 │   └── NoteStore.cs           # save_note (needs approval)
 ├── Components/
 │   ├── Blocks/
